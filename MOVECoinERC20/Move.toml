@@ -1,0 +1,12 @@
+[package]
+name = "ERC20CoinsV3"
+version = "0.0.0"
+
+[addresses]
+YHJCoin = "961abe79017867051be0a6e3aa2b7caa1304339516a8a8e7cc60ef7a1fd9fb71"
+admin = "961abe79017867051be0a6e3aa2b7caa1304339516a8a8e7cc60ef7a1fd9fb71"
+staking="8e145f8fc0b5a9560b1ff2f2f4f456007ddb42aa719662f70a47a798a3d16165"
+team="69ce5625c392e0b54e7a9bcb9b004d1e054bc6f266e4b4a75acff09c9e6a7b2e"
+
+[dependencies]
+AptosFramework = { local = "./aptos-move/framework/aptos-framework" }

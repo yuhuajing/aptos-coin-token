@@ -1,5 +1,5 @@
 //:!:>moon
-module YHJCoin::yhj_coin_v3 {
+module ClayCoin::clay_coin {
     use std::signer;
     use std::string;
     use aptos_framework::timestamp;
@@ -7,26 +7,26 @@ module YHJCoin::yhj_coin_v3 {
     use std::vector;
     use aptos_framework::account;
     use aptos_framework::coin::{Self, Coin, MintCapability, FreezeCapability, BurnCapability};
-    use YHJCoin::acl_v3::{Self, ACL};
+    use ClayCoin::acl::{Self, ACL};
 
     const ENOT_ADMIN:u64=0;
     const E_DONT_HAVE_CAPABILITY:u64=1;
     const E_HAVE_CAPABILITY:u64=2;
     const ENOT_ENOUGH_TOKEN:u64=3;
     const E_MINT_FORBIDDEN:u64=4;
-    const E_ADDR_NOT_REGISTED_YHJCOIN:u64=5;
+    const E_ADDR_NOT_REGISTED_ClayCoin:u64=5;
     const ERR_NO_UNLOCKED:u64=6;
     const ENOT_VALID_LOCK_TIME:u64=7;
     const E_NOT_WHIIELIST:u64=8;
     const DEPLOYER: address = @admin;
     const RESOURCE_ACCOUNT_ADDRESS: address = @staking;
-    const TEAM_ADDRESS: address = @team;
+    const TEAM_ADDRESS: address = @staking;
 
 
-    struct YHJCoin has key {}
+    struct ClayCoin has key {}
 
     struct LockedYHJ has key {
-        coins: Coin<YHJCoin>,
+        coins: Coin<ClayCoin>,
         vec : vector<LockedItem>,
     }
 
@@ -37,18 +37,18 @@ module YHJCoin::yhj_coin_v3 {
     }
 
     // struct Coinabilities has key{
-    //     mint_cap: coin::MintCapability<YHJCoin>,
-    //     burn_cap: coin::BurnCapability<YHJCoin>,
-    //     freeze_cap: coin::FreezeCapability<YHJCoin>
+    //     mint_cap: coin::MintCapability<ClayCoin>,
+    //     burn_cap: coin::BurnCapability<ClayCoin>,
+    //     freeze_cap: coin::FreezeCapability<ClayCoin>
     // }
 
     struct Caps has key {
         admin_address: address, // admin address, control direct mint ANI and other setting
         staking_address: address,   // staking address (masterchef resource address), which can also mint ANI
         direct_mint: bool,
-        mint: MintCapability<YHJCoin>,
-        freeze: FreezeCapability<YHJCoin>,
-        burn: BurnCapability<YHJCoin>,
+        mint: MintCapability<ClayCoin>,
+        freeze: FreezeCapability<ClayCoin>,
+        burn: BurnCapability<ClayCoin>,
         mint_event: event::EventHandle<MintBurnEvent>,
         burn_event: event::EventHandle<MintBurnEvent>,
         acl:ACL,
@@ -68,7 +68,7 @@ module YHJCoin::yhj_coin_v3 {
     fun init_module(admin: &signer){
         // let account_addr = signer::address_of(admin);
         // not_has_coin_capabilities(account_addr);
-        let (burn_cap,freeze_cap,mint_cap) = coin::initialize<YHJCoin>(
+        let (burn_cap,freeze_cap,mint_cap) = coin::initialize<ClayCoin>(
             admin,
             string::utf8(b"YHJ Coin"),
             string::utf8(b"THJ"),
@@ -85,13 +85,13 @@ module YHJCoin::yhj_coin_v3 {
                 burn: burn_cap,
                 mint_event: account::new_event_handle<MintBurnEvent>(admin),
                 burn_event: account::new_event_handle<MintBurnEvent>(admin),
-                acl:acl_v3::empty(),
+                acl:acl::empty(),
             });
 
         register(admin);
 
         move_to(admin, LockedYHJ {
-            coins: coin::zero<YHJCoin>(),
+            coins: coin::zero<ClayCoin>(),
             vec: vector::empty(),
         });
         //team_emission(admin);
@@ -118,7 +118,7 @@ module YHJCoin::yhj_coin_v3 {
         assert!(days_to_unlock >= 1, ENOT_VALID_LOCK_TIME);       
         let caps = borrow_global_mut<Caps>(DEPLOYER);
         let locked_YHJ = borrow_global_mut<LockedYHJ>(DEPLOYER);
-        let coins = coin::mint<YHJCoin>(amount, &caps.mint);
+        let coins = coin::mint<ClayCoin>(amount, &caps.mint);
         coin::merge(&mut locked_YHJ.coins, coins);
         vector::push_back(&mut locked_YHJ.vec, LockedItem {
             amount: amount,
@@ -141,7 +141,7 @@ module YHJCoin::yhj_coin_v3 {
             let item = vector::borrow_mut(&mut locked_yhj.vec,index);
             if(item.owner == account_addr && item.unlock_timestamp<=now){
                 let coins = coin::extract(&mut locked_yhj.coins, item.amount);
-                coin::deposit<YHJCoin>(account_addr, coins);
+                coin::deposit<ClayCoin>(account_addr, coins);
                 let _removed_item = vector::swap_remove(&mut locked_yhj.vec, index);
                 is_succ = true;
             }else{
@@ -156,11 +156,11 @@ module YHJCoin::yhj_coin_v3 {
         let admin_addr = signer::address_of(admin);
         is_admin(admin_addr);
         has_coin_capabilities(admin_addr);
-       // assert!(coin::is_account_registered<YHJCoin>(to),E_ADDR_NOT_REGISTED_YHJCOIN);
+       // assert!(coin::is_account_registered<ClayCoin>(to),E_ADDR_NOT_REGISTED_ClayCoin);
         let caps = borrow_global_mut<Caps>(DEPLOYER);
         assert!(caps.direct_mint,E_MINT_FORBIDDEN);
-        let coins = coin::mint<YHJCoin>(amount,&caps.mint);
-      //  coin::deposit<YHJCoin>(to, coins);
+        let coins = coin::mint<ClayCoin>(amount,&caps.mint);
+      //  coin::deposit<ClayCoin>(to, coins);
         coin::deposit(to, coins);
         event::emit_event(&mut caps.mint_event, MintBurnEvent {
             value: amount,
@@ -177,8 +177,8 @@ module YHJCoin::yhj_coin_v3 {
         assert!( staking_addr == caps.staking_address, E_MINT_FORBIDDEN);
         register(staking);
         
-        let coins = coin::mint<YHJCoin>(amount, &caps.mint);
-        coin::deposit<YHJCoin>(staking_addr, coins);
+        let coins = coin::mint<ClayCoin>(amount, &caps.mint);
+        coin::deposit<ClayCoin>(staking_addr, coins);
     }
 
     public entry fun wl_mint_YHJ(
@@ -188,11 +188,11 @@ module YHJCoin::yhj_coin_v3 {
         let caps = borrow_global<Caps>(DEPLOYER);
         assert!(caps.direct_mint,E_MINT_FORBIDDEN);
         let wl_addr = signer::address_of(wl);
-        assert!(acl_v3::is_allowed(&caps.acl,&wl_addr),E_NOT_WHIIELIST);
+        assert!(acl::is_allowed(&caps.acl,&wl_addr),E_NOT_WHIIELIST);
         register(wl);
         
-        let coins = coin::mint<YHJCoin>(amount, &caps.mint);
-        coin::deposit<YHJCoin>(wl_addr, coins);
+        let coins = coin::mint<ClayCoin>(amount, &caps.mint);
+        coin::deposit<ClayCoin>(wl_addr, coins);
     }
 
     public entry fun burn_YHJ(
@@ -200,9 +200,9 @@ module YHJCoin::yhj_coin_v3 {
         amount: u64
     ) acquires Caps {
         let account_addr = signer::address_of(account);
-        assert!(coin::balance<YHJCoin>(account_addr) >= amount,ENOT_ENOUGH_TOKEN);
+        assert!(coin::balance<ClayCoin>(account_addr) >= amount,ENOT_ENOUGH_TOKEN);
         let caps = borrow_global_mut<Caps>(DEPLOYER);
-        let coins = coin::withdraw<YHJCoin>(account, amount);
+        let coins = coin::withdraw<ClayCoin>(account, amount);
         coin::burn(coins, &caps.burn);
         event::emit_event(&mut caps.burn_event, MintBurnEvent {
             value: amount,
@@ -212,13 +212,13 @@ module YHJCoin::yhj_coin_v3 {
     // public entry fun burn_YHJ_Coin(
     //     account:&signer,
     //     amount:u64,
-    //     //coins: Coin<YHJCoin>,
+    //     //coins: Coin<ClayCoin>,
     // ) acquires Caps {        
     //     let account_addr = signer::address_of(account);
     //     is_admin(account_addr);
     //     has_coin_capabilities(account_addr);
     //     let amount = coin::value(&coins);
-    //     assert!(coin::balance<YHJCoin>(account_addr)>=amount,ENOT_ENOUGH_TOKEN);
+    //     assert!(coin::balance<ClayCoin>(account_addr)>=amount,ENOT_ENOUGH_TOKEN);
     //     let caps = borrow_global_mut<Caps>(DEPLOYER);
     //     coin::burn(coins, &caps.burn);
     //     event::emit_event(&mut caps.burn_event, MintBurnEvent {
@@ -228,8 +228,8 @@ module YHJCoin::yhj_coin_v3 {
 
     public entry fun register(account: &signer){
         let account_address = signer::address_of(account);
-        if (!coin::is_account_registered<YHJCoin>(account_address)){
-            coin::register<YHJCoin>(account);
+        if (!coin::is_account_registered<ClayCoin>(account_address)){
+            coin::register<ClayCoin>(account);
         };
     }
 
@@ -239,8 +239,6 @@ module YHJCoin::yhj_coin_v3 {
     }
 
     /// Set admin address
-
-
     public entry fun set_admin_address(
         admin: &signer,
         new_admin_address: address,
@@ -272,8 +270,8 @@ module YHJCoin::yhj_coin_v3 {
 //Need from)address && to_Address to register the coinType firstly
     public entry fun transfer(from:&signer,to:address,amount:u64){
         let from_addr = signer::address_of(from);
-        assert!(coin::balance<YHJCoin>(from_addr)>=amount,ENOT_ENOUGH_TOKEN);
-        coin::transfer<YHJCoin>(from, to, amount);
+        assert!(coin::balance<ClayCoin>(from_addr)>=amount,ENOT_ENOUGH_TOKEN);
+        coin::transfer<ClayCoin>(from, to, amount);
     }
 
     public entry fun freeze_user(account: &signer) acquires Caps {
@@ -281,7 +279,7 @@ module YHJCoin::yhj_coin_v3 {
       //  is_admin(account_addr);
        // has_coin_capabilities(account_addr);
         let caps = borrow_global<Caps>(DEPLOYER);
-        coin::freeze_coin_store<YHJCoin>(account_addr, &caps.freeze);
+        coin::freeze_coin_store<ClayCoin>(account_addr, &caps.freeze);
     }
 
     public entry fun unfreeze_user(account: &signer) acquires Caps {
@@ -289,7 +287,7 @@ module YHJCoin::yhj_coin_v3 {
        // is_admin(account_addr);
        // has_coin_capabilities(account_addr);
        let caps = borrow_global<Caps>(DEPLOYER);
-        coin::unfreeze_coin_store<YHJCoin>(account_addr, &caps.freeze);
+        coin::unfreeze_coin_store<ClayCoin>(account_addr, &caps.freeze);
     }
 
         /// if not in the allow list, add it. Otherwise, remove it.
@@ -305,7 +303,7 @@ module YHJCoin::yhj_coin_v3 {
         //     vector::push_back(&mut config.acl.allow_list, ua);
         // };
 
-        acl_v3::allowlist(&mut config.acl, ua);
+        acl::allowlist(&mut config.acl, ua);
     }
 
     /// if not in the deny list, add it. Otherwise, remove it.
@@ -319,7 +317,7 @@ module YHJCoin::yhj_coin_v3 {
         // } else {
         //     vector::push_back(&mut config.acl.deny_list, ua);
         // };
-        acl_v3::denylist(&mut config.acl, ua);
+        acl::denylist(&mut config.acl, ua);
     }
 
     // fun is_allowed(acl: &ACL, addr: &address):bool{
@@ -333,13 +331,13 @@ module YHJCoin::yhj_coin_v3 {
     public fun is_allowed_Addr(addr: &signer):bool acquires Caps {
        let account_addr = signer::address_of(addr);
        let config = borrow_global<Caps>(DEPLOYER);
-       acl_v3::is_allowed(&config.acl,&account_addr)
+       acl::is_allowed(&config.acl,&account_addr)
     }
 
     #[view]
     public fun balance(account:&signer):u64{
         let account_addr = signer::address_of(account);
-        coin::balance<YHJCoin>(account_addr)
+        coin::balance<ClayCoin>(account_addr)
     }
 }
 
